@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accommodation Information</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>검사항목 1</h1>
+
+    <form id="accommodationForm">
+        <label for="checkIn">체크인:</label>
+        <input type="date" id="checkIn" required>
+
+        <label for="checkOut">체크아웃:</label>
+        <input type="date" id="checkOut" required>
+
+        <label for="guests">인원:</label>
+        <input type="number" id="guests" min="1" required>
+
+        <label for="accommodationType">숙소 타입:</label>
+        <select id="accommodationType" required>
+            <option value="private">개인</option>
+            <option value="entire">전체</option>
+        </select>
+
+        <button type="button" onclick="findAccoms()">Show Information</button>
+    </form>
+
+    <div id="accommodationInfo"></div>
+
+    <script>
+        async function findAccoms() {
+            const checkInDate = document.getElementById('checkIn').value;
+            const checkOutDate = document.getElementById('checkOut').value;
+            const numberOfGuests = document.getElementById('guests').value;
+            const accommodationType = document.getElementById('accommodationType').value;
+
+            try {
+                const response = await axios.get(`http://127.0.0.1:3000/accom/findAccoms/${checkOutDate}/${checkInDate}`);
+                const accoms = response.data;
+
+                const infoContainer = document.getElementById('accommodationInfo');
+                infoContainer.innerHTML = `
+                    <h2>Accommodation Information:</h2>
+                    <p><strong>Check-In Date:</strong> ${checkInDate}</p>
+                    <p><strong>Check-Out Date:</strong> ${checkOutDate}</p>
+                    <p><strong>Number of Guests:</strong> ${numberOfGuests}</p>
+                    <p><strong>Accommodation Type:</strong> ${accommodationType === 'private' ? 'Private' : 'Entire'}</p>
+                    
+                    <h2>Available Accommodations:</h2>
+                    <ul>
+                        ${accoms.map(accom => `<li>${accom.name}</li>`).join('')}
+                    </ul>
+                `;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+</html>

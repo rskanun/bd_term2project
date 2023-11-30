@@ -1,10 +1,12 @@
 const express = require("express");
+const cors = require('cors');
 const app = express();
 const mongoose = require("mongoose");
 const fs = require('fs');
 const faker = require('faker');
 
 const accomController = require("./routers/accomController");
+const rentalController = require("./routers/rentalController");
 
 const hostname = "127.0.0.1";
 const port = 3000;
@@ -18,11 +20,11 @@ const server = async () => {
     try {
         await mongoose.connect(DB_URI);
         app.use(express.json());
-        app.use(accomController);
+        app.use(cors());
+        app.use("/accom", accomController);
+        app.use("/rental", rentalController);
         app.listen(port, hostname, function () {
             console.log(`Server running at http://${hostname}:${port}/`);
-
-            readAndSaveAccommodation(accomFilePath);
         });
     } catch (e) {
         console.error(e);
