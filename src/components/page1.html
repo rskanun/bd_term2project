@@ -1,63 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Accommodation Information</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-</head>
-<body>
-    <h1>검사항목 1</h1>
+  </head>
+  <body>
+    <!-- Init Data -->
+    <div>
+      <h1>초기값 생성</h1>
+      <button type="button" onclick="initData()">초기값 생성 버튼</button>
+    </div>
 
-    <form id="accommodationForm">
+    <!-- Scenario 1 -->
+    <div>
+      <h1>검사항목 1</h1>
+
+      <form id="accommodationForm">
         <label for="checkIn">체크인:</label>
-        <input type="date" id="checkIn" required>
+        <input type="date" id="checkIn" required />
 
         <label for="checkOut">체크아웃:</label>
-        <input type="date" id="checkOut" required>
+        <input type="date" id="checkOut" required />
 
         <label for="guests">인원:</label>
-        <input type="number" id="guests" min="1" required>
+        <input type="number" id="guests" min="1" required />
 
         <label for="accommodationType">숙소 타입:</label>
         <select id="accommodationType" required>
-            <option value="private">개인</option>
-            <option value="entire">전체</option>
+          <option value="개인">개인</option>
+          <option value="전체">전체</option>
         </select>
 
         <button type="button" onclick="findAccoms()">Show Information</button>
-    </form>
+      </form>
 
-    <div id="accommodationInfo"></div>
+      <div id="accommodationInfo"></div>
+    </div>
 
     <script>
-        async function findAccoms() {
-            const checkInDate = document.getElementById('checkIn').value;
-            const checkOutDate = document.getElementById('checkOut').value;
-            const numberOfGuests = document.getElementById('guests').value;
-            const accommodationType = document.getElementById('accommodationType').value;
+      async function initData() {
+        try {
+          const accomRes = await axios.post(
+            `http://127.0.0.1:3000/accom/initAccom`
+          );
+          const guestRes = await axios.post(
+            `http://127.0.0.1:3000/guest/initGuest`
+          );
 
+          if (accomRes.status === 200 && guestRes.status === 200) {
+            await axios.post(`http://127.0.0.1:3000/rental/initRental`);
+            await axios.post(`http://127.0.0.1:3000/review/initReview`);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      async function findAccoms() {
+        const checkInDate = document.getElementById("checkIn").value;
+        const checkOutDate = document.getElementById("checkOut").value;
+        const numberOfGuests = document.getElementById("guests").value;
+        const accommodationType =
+          document.getElementById("accommodationType").value;
+
+        try {
+          const response = await axios.get(
+            `http://127.0.0.1:3000/accom/findAccoms/${checkOutDate}/${checkInDate}/${numberOfGuests}/${accommodationType}`
+          );
+          const accoms = response.data.map(async (accom) => {
             try {
-                const response = await axios.get(`http://127.0.0.1:3000/accom/findAccoms/${checkOutDate}/${checkInDate}`);
-                const accoms = response.data;
-
-                const infoContainer = document.getElementById('accommodationInfo');
-                infoContainer.innerHTML = `
-                    <h2>Accommodation Information:</h2>
-                    <p><strong>Check-In Date:</strong> ${checkInDate}</p>
-                    <p><strong>Check-Out Date:</strong> ${checkOutDate}</p>
-                    <p><strong>Number of Guests:</strong> ${numberOfGuests}</p>
-                    <p><strong>Accommodation Type:</strong> ${accommodationType === 'private' ? 'Private' : 'Entire'}</p>
-                    
-                    <h2>Available Accommodations:</h2>
-                    <ul>
-                        ${accoms.map(accom => `<li>${accom.name}</li>`).join('')}
-                    </ul>
-                `;
+                
             } catch (e) {
                 console.error(e);
             }
+          });
+
+          const infoContainer = document.getElementById("accommodationInfo");
+          infoContainer.innerHTML = `
+                    <h2>Available Accommodations:</h2>
+                    <label for="accommodationType">정렬 타입:</label>
+                    <select id="accommodationType" required>
+                        <option value="normal">기본</option>
+                        <option value="price">가격</option>
+                        <option value="total">별점</option>
+                    </select>
+                    <ul>
+                        ${accoms.map((accom) => `
+                            <li>${accom.name}(${accom.type})</li>
+                            <li>총 가격: </li>
+                            <li>${accom.name}(${accom.type})</li>
+                        `)
+                        .join("")}
+                    </ul>
+                `;
+        } catch (e) {
+          console.error(e);
         }
+      }
+
+      const getTotalPrice = ({checkInDate, checkOutDate, weekdayPrice, weekendPrice}) => {
+        let totalPrice = 0;
+        for (let date = new Date(checkInDate); date < checkOutDate; date.setDate(date.getDate() + 1)) {
+            const dayOfWeek = date.getDay();
+            totalPrice += (dayOfWeek >= 1 && dayOfWeek <= 4) ? weekdayPrice : weekendPrice;
+        }
+
+        return totalPrice;
+      }
     </script>
-</body>
+  </body>
 </html>
