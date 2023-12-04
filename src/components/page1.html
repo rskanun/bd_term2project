@@ -69,13 +69,24 @@
           const response = await axios.get(
             `http://127.0.0.1:3000/accom/findAccoms/${checkOutDate}/${checkInDate}/${numberOfGuests}/${accommodationType}`
           );
-          const accoms = response.data.map(async (accom) => {
-            try {
-                
-            } catch (e) {
+          const accoms = await Promise.all(
+            response.data.map(async (accom) => {
+              try {
+                const totalPrice = await getTotalPrice({
+                  checkIn: checkInDate,
+                  checkOut: checkOutDate,
+                  weekdayPrice: accom.weekdayPrice,
+                  weekendPrice: accom.weekendPrice,
+                });
+
+                return { ...accom, totalPrice };
+              } catch (e) {
                 console.error(e);
-            }
-          });
+              }
+            })
+          );
+
+          console.log(accoms);
 
           const infoContainer = document.getElementById("accommodationInfo");
           infoContainer.innerHTML = `
@@ -87,12 +98,15 @@
                         <option value="total">별점</option>
                     </select>
                     <ul>
-                        ${accoms.map((accom) => `
+                        ${accoms
+                          .map(
+                            (accom) => `
                             <li>${accom.name}(${accom.type})</li>
-                            <li>총 가격: </li>
-                            <li>${accom.name}(${accom.type})</li>
-                        `)
-                        .join("")}
+                            <li>총 가격: ${accom.totalPrice}</li>
+                            <li>평균 별점: </li>
+                        `
+                          )
+                          .join("")}
                     </ul>
                 `;
         } catch (e) {
@@ -100,15 +114,23 @@
         }
       }
 
-      const getTotalPrice = ({checkInDate, checkOutDate, weekdayPrice, weekendPrice}) => {
+      const getTotalPrice = ({
+        checkIn,
+        checkOut,
+        weekdayPrice,
+        weekendPrice,
+      }) => {
+        const checkInDate = new Date(checkIn);
+        const checkOutDate = new Date(checkOut);
         let totalPrice = 0;
-        for (let date = new Date(checkInDate); date < checkOutDate; date.setDate(date.getDate() + 1)) {
-            const dayOfWeek = date.getDay();
-            totalPrice += (dayOfWeek >= 1 && dayOfWeek <= 4) ? weekdayPrice : weekendPrice;
+        for (let date = checkInDate; date < checkOutDate; date.setDate(date.getDate() + 1)) {
+          const dayOfWeek = date.getDay();
+          totalPrice +=
+            dayOfWeek >= 1 && dayOfWeek <= 4 ? weekdayPrice : weekendPrice;
         }
 
         return totalPrice;
-      }
+      };
     </script>
   </body>
 </html>
