@@ -212,11 +212,24 @@
                     <ul>
                       <li>체크인 날짜: ${rental.checkInDate}</li>
                       <li>체크아웃 날짜: ${rental.checkOutDate}</li>
+                      <button type="button" onclick="cancelRental('${rental._id}')">취소</button>
                     </ul>
                   `
                 )
                 .join("")}
                 `;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      const cancelRental = async (rentalId) => {
+        try {
+          const response = await axios.patch(
+            `http://127.0.0.1:3000/rental/cancelRental/${rentalId}`
+          );
+
+          await findRentals();
         } catch (e) {
           console.error(e);
         }

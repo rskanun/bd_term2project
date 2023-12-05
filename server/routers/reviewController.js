@@ -20,7 +20,6 @@ router.post("/initReview", async (req, res) => {
 
         for (const rental of rentals) {
           const dummyData = generateDummyData({
-            id,
             rentalId: rental._id,
             guestId: rental.guestId,
           });
@@ -74,9 +73,8 @@ router.get("/getAvgRating/:accomId", async (req, res) => {
   }
 });
 
-const generateDummyData = ({ accomId, rentalId, guestId }) => {
+const generateDummyData = ({ rentalId, guestId }) => {
   return {
-    accommodationId: accomId,
     rentalId,
     guestId,
     rating: faker.datatype.number({ min: 1, max: 5 }),

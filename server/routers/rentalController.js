@@ -53,19 +53,28 @@ router.get("/getMyHistory/:guestId", async (req, res) => {
             {
                 $match: {
                     guestId: id,
+                    isCanceled: false
                 },
             },
             {
                 $lookup: {
                     from: "reviews",
-                    localField: "_id",
-                    foreignField: "rentalId",
+                    let: { rentalId: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$rentalId", "$$rentalId"],
+                                },
+                            },
+                        },
+                    ],
                     as: "review",
                 },
             },
             {
                 $match: {
-                    "review": { $exists: false },
+                    "review": { $eq: [] },
                 },
             },
             {
@@ -92,7 +101,29 @@ router.get("/getMyHistory/:guestId", async (req, res) => {
         console.error(e);
         return res.status(500).json({ message: "server error!" });
     }
-})
+});
+
+router.patch("/cancelRental/:rentalId", async (req, res) => {
+    try {
+        const rentalId = new mongoose.Types.ObjectId(req.params.rentalId);
+
+        const findRental = await RentalHistory.findById(rentalId);
+
+        if(findRental) {
+            findRental.isCanceled = true;
+            await findRental.save();
+
+            return res.status(200).json({ message: "취소 성공" });
+        }
+        else {
+            return res.status(404).json({ message: "찾을 수 없는 예약입니다!" });
+        }
+
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ message: "server error!" });
+    }
+});
 
 const generateDummyData = ({id, guestId, maxCapacity, weekdayPrice, weekendPrice}) => {
     const startDate = new Date('2023-12-01');
@@ -109,7 +140,8 @@ const generateDummyData = ({id, guestId, maxCapacity, weekdayPrice, weekendPrice
         checkInDate,
         checkOutDate,
         personnel: faker.datatype.number({ min: 1, max: maxCapacity }),
-        totalPrice: getTotalPrice({checkInDate, checkOutDate, weekdayPrice, weekendPrice})
+        totalPrice: getTotalPrice({checkInDate, checkOutDate, weekdayPrice, weekendPrice}),
+        isCanceled: false
     };
 };
 

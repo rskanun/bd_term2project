@@ -8,8 +8,8 @@ const RentalSchema = new Schema(
         checkInDate: Date,
         checkOutDate: Date,
         personnel: Number,
-        totalPrice: Number
-
+        totalPrice: Number,
+        isCanceled: Boolean
     },{timestamps: true, collection: 'rentalHistories'}
 )
 const RentalHistory = mongoose.model("RentalHistory", RentalSchema);
