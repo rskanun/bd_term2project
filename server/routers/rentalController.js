@@ -2,23 +2,21 @@ const express = require("express");
 const router = express.Router();
 const fs = require('fs');
 const faker = require('faker');
+const util = require('util');
+const mongoose = require("mongoose");
+const readFileAsync = util.promisify(fs.readFile);
 const {RentalHistory} = require("../models/rentalHistroy");
 const {Accommodation} = require("../models/accommodation");
 const {Guest} = require("../models/guest");
 
 router.post("/initRental", async (req, res) => {
     const fileName = "./accomInitFile.txt";
-    fs.readFile(fileName, 'utf8', async (err, data) => {
-        if (err) {
-            console.error('Error reading file:', err);
-            return res.status(500).json({ message: "server error!" });
-        }
-
+    try {
+        const data = await readFileAsync(fileName, 'utf8');
         const names = data.trim().split('\r\n');
         
-        for (const name of names) {
-            try {
-                const accom = await Accommodation.findOne({ name });
+        await Promise.all(names.map(async (name) => {
+            const accom = await Accommodation.findOne({ name });
                 let dummyDatas = [];
     
                 if (accom) {
@@ -38,14 +36,62 @@ router.post("/initRental", async (req, res) => {
 
                     await RentalHistory.create(dummyDatas);
                 }
-            } catch (e) {
-                console.error(e);
-                return res.status(500).json({ message: "server error!" });
-            }
-        }
+        }));
         
         return res.status(200).json({ message: "추가 완료" });
-    });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ message: "server error!" });
+    }
+})
+
+router.get("/getMyHistory/:guestId", async (req, res) => {
+    try {
+        const id = new mongoose.Types.ObjectId(req.params.guestId);
+
+        const rentals = await RentalHistory.aggregate([
+            {
+                $match: {
+                    guestId: id,
+                },
+            },
+            {
+                $lookup: {
+                    from: "reviews",
+                    localField: "_id",
+                    foreignField: "rentalId",
+                    as: "review",
+                },
+            },
+            {
+                $match: {
+                    "review": { $exists: false },
+                },
+            },
+            {
+                $lookup: {
+                    from: "accommodations",
+                    localField: "accommodationId",
+                    foreignField: "_id",
+                    as: "accommodation",
+                },
+            },
+            {
+                $match: {
+                    "accommodation.type": "개인",
+                },
+            },
+        ]);
+
+        if(rentals.length > 0) {
+            return res.status(200).json(rentals);
+        } else {
+            return res.status(404).json({ message: "해당 회원의 예약 내역을 찾을 수 없습니다!" })
+        }
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ message: "server error!" });
+    }
 })
 
 const generateDummyData = ({id, guestId, maxCapacity, weekdayPrice, weekendPrice}) => {

@@ -23,4 +23,15 @@ router.post("/initGuest", async (req, res) => {
     }
 })
 
+router.get("/getGuests", async (req, res) => {
+    try {
+        const guests = await Guest.find();
+
+        return res.status(200).json(guests);
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ message: "server error!" });
+    }
+})
+
 module.exports = router;

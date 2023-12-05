@@ -33,13 +33,39 @@
           <option value="전체">전체</option>
         </select>
 
-        <button type="button" onclick="findAccoms()">Show Information</button>
+        <label for="sortType">정렬 타입:</label>
+        <select id="sortType" required>
+          <option value="normal">기본</option>
+          <option value="price">가격</option>
+          <option value="total">별점</option>
+        </select>
+
+        <button type="button" onclick="findAccoms()">검색</button>
       </form>
 
       <div id="accommodationInfo"></div>
     </div>
 
+    <!-- Scenario 4 -->
+    <div>
+      <h1>검사항목 4</h1>
+
+      <form id="rentalHistoryForm">
+        <label for="guestSelect">게스트:</label>
+        <select id="guestSelect" required>
+          <option value="">게스트 선택</option>
+        </select>
+
+        <button type="button" onclick="findRentals()">검색</button>
+      </form>
+
+      <div id="rentalHistoryInfo"></div>
+    </div>
+
     <script>
+      /*************************************************************
+       * init Data
+       **************************************************************/
       async function initData() {
         try {
           const accomRes = await axios.post(
@@ -52,12 +78,38 @@
           if (accomRes.status === 200 && guestRes.status === 200) {
             await axios.post(`http://127.0.0.1:3000/rental/initRental`);
             await axios.post(`http://127.0.0.1:3000/review/initReview`);
+
+            await fetchGuests();
           }
         } catch (e) {
           console.error(e);
         }
       }
 
+      async function fetchGuests() {
+        try {
+          const response = await axios.get("http://127.0.0.1:3000/guest/getGuests");
+          const guests = response.data;
+
+          const guestSelect = document.getElementById("guestSelect");
+          guests.forEach((guest) => {
+            const option = document.createElement("option");
+            option.value = guest._id;
+            option.text = guest.name;
+            guestSelect.add(option);
+          });
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", async function () {
+        await fetchGuests();
+      });
+
+      /*************************************************************
+       * Scenario 1
+       **************************************************************/
       async function findAccoms() {
         const checkInDate = document.getElementById("checkIn").value;
         const checkOutDate = document.getElementById("checkOut").value;
@@ -67,7 +119,7 @@
 
         try {
           const response = await axios.get(
-            `http://127.0.0.1:3000/accom/findAccoms/${checkOutDate}/${checkInDate}/${numberOfGuests}/${accommodationType}`
+            `http://127.0.0.1:3000/accom/findAccoms/${numberOfGuests}/${accommodationType}`
           );
           const accoms = await Promise.all(
             response.data.map(async (accom) => {
@@ -79,35 +131,38 @@
                   weekendPrice: accom.weekendPrice,
                 });
 
-                return { ...accom, totalPrice };
+                const avgRating = await axios.get(
+                  `http://127.0.0.1:3000/review/getAvgRating/${accom._id}`
+                );
+
+                return { ...accom, totalPrice, avgRating: avgRating.data };
               } catch (e) {
                 console.error(e);
               }
             })
           );
 
-          console.log(accoms);
+          const sortType = document.getElementById("sortType").value;
+          if (sortType === "price") {
+            accoms.sort((a, b) => a.totalPrice - b.totalPrice);
+          } else if (sortType === "total") {
+            accoms.sort((a, b) => b.avgRating - a.avgRating);
+          }
 
           const infoContainer = document.getElementById("accommodationInfo");
           infoContainer.innerHTML = `
-                    <h2>Available Accommodations:</h2>
-                    <label for="accommodationType">정렬 타입:</label>
-                    <select id="accommodationType" required>
-                        <option value="normal">기본</option>
-                        <option value="price">가격</option>
-                        <option value="total">별점</option>
-                    </select>
+            <h2>숙소 검색 결과:</h2>
+              ${accoms
+                .map(
+                  (accom) => `
                     <ul>
-                        ${accoms
-                          .map(
-                            (accom) => `
-                            <li>${accom.name}(${accom.type})</li>
-                            <li>총 가격: ${accom.totalPrice}</li>
-                            <li>평균 별점: </li>
-                        `
-                          )
-                          .join("")}
+                      <li>${accom.name}(${accom.type})</li>
+                      <li>총 가격: ${accom.totalPrice}</li>
+                      <li>평균 별점: ${accom.avgRating}</li>
                     </ul>
+                  `
+                )
+                .join("")}
                 `;
         } catch (e) {
           console.error(e);
@@ -123,7 +178,11 @@
         const checkInDate = new Date(checkIn);
         const checkOutDate = new Date(checkOut);
         let totalPrice = 0;
-        for (let date = checkInDate; date < checkOutDate; date.setDate(date.getDate() + 1)) {
+        for (
+          let date = checkInDate;
+          date < checkOutDate;
+          date.setDate(date.getDate() + 1)
+        ) {
           const dayOfWeek = date.getDay();
           totalPrice +=
             dayOfWeek >= 1 && dayOfWeek <= 4 ? weekdayPrice : weekendPrice;
@@ -131,6 +190,37 @@
 
         return totalPrice;
       };
+
+      /*************************************************************
+       * Scenario 4
+       **************************************************************/
+      async function findRentals() {
+        const guestId = document.getElementById("guestSelect").value;
+
+        try {
+          const response = await axios.get(
+            `http://127.0.0.1:3000/rental/getMyHistory/${guestId}`
+          );
+          const rentals = response.data;
+
+          const infoContainer = document.getElementById("rentalHistoryInfo");
+          infoContainer.innerHTML = `
+            <h2>예약 정보:</h2>
+              ${rentals
+                .map(
+                  (rental) => `
+                    <ul>
+                      <li>체크인 날짜: ${rental.checkInDate}</li>
+                      <li>체크아웃 날짜: ${rental.checkOutDate}</li>
+                    </ul>
+                  `
+                )
+                .join("")}
+                `;
+        } catch (e) {
+          console.error(e);
+        }
+      }
     </script>
   </body>
 </html>

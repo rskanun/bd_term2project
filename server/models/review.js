@@ -3,7 +3,6 @@ const {Schema, ObjectId} = mongoose;
 
 const ReviewSchema = new Schema(
     {
-        accommodationId: ObjectId,
         rentalId: ObjectId,
         guestId: ObjectId,
         rating: Number,
