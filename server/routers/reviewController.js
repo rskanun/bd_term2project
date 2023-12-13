@@ -73,6 +73,24 @@ router.get("/getAvgRating/:accomId", async (req, res) => {
   }
 });
 
+router.get("/findReview", async (req, res) => {
+  const { accommodationId, guestId } = req.query;
+
+  try {
+    const rental = await RentalHistory.findOne({ accommodationId, guestId });
+    const review = await Review.findOne({ rentalId: rental._id });
+
+    if (review) {
+      return res.status(200).json({ hasReview: true });
+    } else {
+      return res.status(200).json({ hasReview: false });
+    }
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "서버 오류!" });
+  }
+});
+
 const generateDummyData = ({ rentalId, guestId }) => {
   return {
     rentalId,

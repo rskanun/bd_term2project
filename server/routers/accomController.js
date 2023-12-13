@@ -48,6 +48,16 @@ router.post("/initAccom", async (req, res) => {
     }
 })
 
+router.get("/getAllAccommodations", async (req, res) => {
+    try {
+        const accommodations = await Accommodation.find({});
+        res.status(200).json(accommodations);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "서버 오류!" });
+    }
+});
+
 const generateDummyData = (name, index) => {
     return {
         name: name,

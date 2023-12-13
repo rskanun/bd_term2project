@@ -46,6 +46,27 @@
       <div id="accommodationInfo"></div>
     </div>
 
+    <!-- Scenario 3 -->
+    <div>
+      <h1>검사항목 3</h1>
+
+      <label for="guestId_test3Form">게스트 아이디:</label>
+      <input type="search" id="guestId_test3" required />
+      <br />
+      <label for="accom_test3Form">숙소 아이디:</label>
+      <input type="search" id="accom_test3" required />
+      <br />
+      <label for="checkIn_test3Form">체크인:</label>
+      <input type="date" id="checkIn_test3" required />
+      <br />
+      <label for="checkOut_test3Form">체크아웃:</label>
+      <input type="date" id="checkOut_test3" required />
+      <br />
+      <label for="guests_test3Form">인원:</label>
+      <input type="number" id="guests_test3" min="1" required />
+      <button type="button" onclick="bookAccom()">Book now</button>
+    </div>
+
     <!-- Scenario 4 -->
     <div>
       <h1>검사항목 4</h1>
@@ -60,6 +81,29 @@
       </form>
 
       <div id="rentalHistoryInfo"></div>
+    </div>
+
+    <!-- Scenario 5 -->
+    <div>
+      <h1>검사항목 5</h1>
+      <label for="guestId_test5Form">게스트 아이디:</label>
+      <input type="search" id="guestId_test5" required />
+      <br />
+      <label for="findType_test5Form">숙박 여부:</label>
+      <select id="findType" required>
+        <option value="type_whole">전체</option>
+        <option value="type_booking">체크인 예정</option>
+        <option value="type_finished">체크아웃 완료</option>
+      </select>
+      <br />
+      <button type="button" onclick="searchRental()">Search</button>
+      <br /><br />
+      <div>
+        &emsp;&emsp;&emsp;숙소
+        이름&emsp;&emsp;&emsp;&emsp;체크인&emsp;&emsp;&emsp;&emsp;체크아웃&emsp;&emsp;&emsp;리뷰여부
+      </div>
+
+      <div id="rentalInfo"></div>
     </div>
 
     <script>
@@ -88,7 +132,9 @@
 
       async function fetchGuests() {
         try {
-          const response = await axios.get("http://127.0.0.1:3000/guest/getGuests");
+          const response = await axios.get(
+            "http://127.0.0.1:3000/guest/getGuests"
+          );
           const guests = response.data;
 
           const guestSelect = document.getElementById("guestSelect");
@@ -192,6 +238,36 @@
       };
 
       /*************************************************************
+       * Scenario 3
+       **************************************************************/
+
+      async function bookAccom() {
+        const guestId = document.getElementById("guestId_test3").value;
+        const accomId = document.getElementById("accom_test3").value;
+        const checkInDate = document.getElementById("checkIn_test3").value;
+        const checkOutDate = document.getElementById("checkOut_test3").value;
+        const numberOfGuests = document.getElementById("guests_test3").value;
+
+        try {
+          const reservationData = {
+            guestId,
+            accommodationId: accomId,
+            checkInDate,
+            checkOutDate,
+            personnel: numberOfGuests,
+          };
+
+          const reservationRes = await axios.post(
+            `http://127.0.0.1:3000/rental/createRental`,
+            reservationData
+          );
+
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      /*************************************************************
        * Scenario 4
        **************************************************************/
       async function findRentals() {
@@ -232,6 +308,115 @@
           await findRentals();
         } catch (e) {
           console.error(e);
+        }
+      };
+
+      /*************************************************************
+       * Scenario 5
+       **************************************************************/
+      async function searchRental() {
+        const guestId = document.getElementById("guestId_test5").value;
+        const findType = document.getElementById("findType").value;
+
+        try {
+          const reservationData = {
+            guestId,
+            findType,
+          };
+          const reservationRes = await axios.get(
+            `http://127.0.0.1:3000/rental/findRentalHistory`,
+            { params: reservationData }
+          );
+          displayRentalInfo(reservationRes.data);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      function formatDate(dateString) {
+        const options = { year: "numeric", month: "numeric", day: "numeric" };
+        return new Date(dateString).toLocaleDateString("ko-KR", options);
+      }
+
+      async function displayRentalInfo(rentalData) {
+        const rentalInfoContainer = document.getElementById("rentalInfo");
+        rentalInfoContainer.innerHTML = "";
+
+        const rentalHistoryArray = rentalData.rentalHistory;
+
+        if (rentalHistoryArray && rentalHistoryArray.length > 0) {
+          const ul = document.createElement("ul");
+
+          // 숙소의 이름을 가져오기 위해 Accommodation 정보를 서버에서 받아옴
+          const accommodations = await getAccommodations();
+
+          // 리뷰 여부를 확인하고 표시하는 코드
+          for (const rental of rentalHistoryArray) {
+            const li = document.createElement("li");
+
+            // Accommodation 정보에서 숙소의 이름을 가져옴
+            const accommodation = accommodations.find(
+              (a) => a && a._id.toString() === rental.accommodationId.toString()
+            );
+            const accommodationName = accommodation
+              ? accommodation.name
+              : "N/A";
+
+            // 날짜 포맷 함수를 사용하여 원하는 형식으로 날짜 표시
+            const checkInDate = rental.checkInDate
+              ? formatDate(rental.checkInDate)
+              : "N/A";
+            const checkOutDate = rental.checkOutDate
+              ? formatDate(rental.checkOutDate)
+              : "N/A";
+
+            // 리뷰 여부에 따라 표시할 텍스트 결정
+            const hasReview = await getReviewStatus(
+              rental.accommodationId,
+              rental.guestId
+            );
+            const reviewText = hasReview ? "리뷰 작성함" : "리뷰 미작성";
+
+            li.textContent = `${accommodationName}
+                ${checkInDate}
+                ${checkOutDate}
+                ${reviewText}`;
+
+            ul.appendChild(li);
+          }
+          rentalInfoContainer.appendChild(ul);
+        } else {
+          rentalInfoContainer.textContent = "해당하는 숙박 기록이 없습니다.";
+        }
+      }
+
+      async function getReviewStatus(accommodationId, guestId) {
+        try {
+          const response = await axios.get(
+            "http://127.0.0.1:3000/review/findReview",
+            {
+              params: {
+                accommodationId,
+                guestId,
+              },
+            }
+          );
+          return response.data.hasReview;
+        } catch (error) {
+          console.error(error);
+          return false;
+        }
+      }
+
+      async function getAccommodations() {
+        try {
+          const response = await axios.get(
+            "http://127.0.0.1:3000/accom/getAllAccommodations"
+          );
+          return response.data;
+        } catch (error) {
+          console.error(error);
+          return [];
         }
       }
     </script>

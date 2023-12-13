@@ -125,6 +125,63 @@ router.patch("/cancelRental/:rentalId", async (req, res) => {
     }
 });
 
+router.post("/createRental", async (req, res) => {
+    const { accommodationId, guestId, checkInDate, checkOutDate, personnel } = req.body;
+
+    try {
+        const accommodation = await Accommodation.findById(accommodationId);
+        if (!accommodation) {
+            return res.status(404).json({ message: "숙소를 찾을 수 없습니다." });
+        }
+
+        const totalPrice = getTotalPrice({
+            checkInDate,
+            checkOutDate: new Date(checkOutDate).setDate(new Date(checkOutDate).getDate() + 1),
+            weekdayPrice: accommodation.weekdayPrice,
+            weekendPrice: accommodation.weekendPrice,
+        });
+
+        const rentalData = {
+            accommodationId,
+            guestId,
+            checkInDate,
+            checkOutDate,
+            personnel,
+            totalPrice,
+        };
+
+        const rentalHistory = await RentalHistory.create(rentalData);
+
+        return res.status(200).json({ message: "RentalHistory 생성 완료", rentalHistory });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ message: "서버 오류!" });
+    }
+});
+
+router.get("/findRentalHistory", async (req, res) => {
+    const { guestId, findType } = req.query;
+
+    try {
+        let rentalHistory;
+
+        if (findType === "type_whole") {
+            rentalHistory = await RentalHistory.find({ guestId });
+        } else if (findType === "type_booking") {
+            rentalHistory = await RentalHistory.find({ guestId, checkInDate: { $gt: new Date() } });
+        } else if (findType === "type_finished") {
+            rentalHistory = await RentalHistory.find({ guestId, checkOutDate: { $lt: new Date() } });
+        } else {
+            return res.status(400).json({ message: "잘못된 findType 값입니다." });
+        }
+
+        return res.status(200).json({ rentalHistory });
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ message: "서버 오류!" });
+    }
+});
+
 const generateDummyData = ({id, guestId, maxCapacity, weekdayPrice, weekendPrice}) => {
     const startDate = new Date('2023-12-01');
     const endDate = new Date('2023-12-31');
