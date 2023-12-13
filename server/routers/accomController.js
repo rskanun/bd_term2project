@@ -24,6 +24,18 @@ router.get("/findAccoms/:personnel/:type", async (req, res) => {
     }
 });
 
+router.get("/findAccom/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+        const accoms = await Accommodation.findOne({ _id: id });
+
+        return res.status(200).json(accoms);
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ message: "server error!" });
+    }
+});
+
 router.post("/initAccom", async (req, res) => {
     const fileName = "./accomInitFile.txt";
 
@@ -64,7 +76,7 @@ const generateDummyData = (name, index) => {
         type: index % 2 === 0 ? '개인' : '전체',
         address: faker.address.streetAddress(),
         introduction: faker.lorem.paragraph(),
-        amenities: faker.lorem.sentence(),
+        amentities: faker.lorem.sentence(),
         bedroomNum: faker.datatype.number({ min: 1, max: 5 }),
         bedNum: faker.datatype.number({ min: 1, max: 10 }),
         bathroomNum: faker.datatype.number({ min: 1, max: 3 }),

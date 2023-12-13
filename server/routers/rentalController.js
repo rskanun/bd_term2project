@@ -182,6 +182,17 @@ router.get("/findRentalHistory", async (req, res) => {
     }
 });
 
+router.get("/getRentalDetail/:accomId", async (req, res) => {
+    const { accomId } = req.params;
+    try {
+        const rental = await RentalHistory.find({accommodationId: accomId});
+        return res.status(200).json({ rental });
+
+    }catch (e) {
+        console.log("에러 발생 " + e);
+    }
+});
+
 const generateDummyData = ({id, guestId, maxCapacity, weekdayPrice, weekendPrice}) => {
     const startDate = new Date('2023-12-01');
     const endDate = new Date('2023-12-31');

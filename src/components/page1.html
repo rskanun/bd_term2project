@@ -46,6 +46,53 @@
       <div id="accommodationInfo"></div>
     </div>
 
+    <!-- Scenario 2 -->
+    <div>
+      <h1>검사항목 2</h1>
+
+      <label for="accomId">숙소 코드</label>
+      <input type="search" id="accomId" required />
+
+      <label for="month">Month</label>
+      <select id="month" required>
+        <option value="1">1월</option>
+        <option value="2">2월</option>
+        <option value="3">3월</option>
+        <option value="4">4월</option>
+        <option value="5">5월</option>
+        <option value="6">6월</option>
+        <option value="7">7월</option>
+        <option value="8">8월</option>
+        <option value="9">9월</option>
+        <option value="10">10월</option>
+        <option value="11">11월</option>
+        <option value="12">12월</option>
+      </select>
+
+      <button type="button" onclick="searchAccom()">검색</button>
+
+      <div id="accommodationDetails"></div>
+
+      <div id="reviewInfos"></div>
+
+      <table id="calendar">
+        <thead>
+          <tr>
+            <th>일</th>
+            <th>월</th>
+            <th>화</th>
+            <th>수</th>
+            <th>목</th>
+            <th>금</th>
+            <th>토</th>
+          </tr>
+        </thead>
+        <tbody id="calendar-body">
+          <!--여기에 달력 내용 표시-->
+        </tbody>
+      </table>
+    </div>
+
     <!-- Scenario 3 -->
     <div>
       <h1>검사항목 3</h1>
@@ -106,6 +153,26 @@
       <div id="rentalInfo"></div>
     </div>
 
+    <!-- Scenario 6 -->
+    <div>
+      <h1>검사항목 6</h1>
+      <label for="guestId">게스트 아이디:</label>
+      <input type="search" id="guestId" required />
+      <br />
+      <label for="rentalId">예약 아이디:</label>
+      <input type="search" id="rentalId" required />
+      <br />
+      <label for="star">별점:</label>
+      <input type="search" id="star" required />
+      <br />
+      <label for="comment">후기</label>
+      <input type="search" id="comment" required />
+      <br />
+      <button type="button" id="registButton" onclick="registReview()">
+        등록
+      </button>
+    </div>
+
     <script>
       /*************************************************************
        * init Data
@@ -150,6 +217,10 @@
       }
 
       document.addEventListener("DOMContentLoaded", async function () {
+        // 현재 날짜의 월을 구하여 선택된 월로 설정
+        document.getElementById("month").value = new Date().getMonth() + 1;
+
+        // 게스트 목록 가져오기
         await fetchGuests();
       });
 
@@ -238,6 +309,136 @@
       };
 
       /*************************************************************
+       * Scenario 2
+       **************************************************************/
+
+      async function searchAccom() {
+        showAccomInfo();
+        showReview();
+        drawCalendar();
+      }
+
+      async function showAccomInfo() {
+        const accommodationDetailsDiv = document.getElementById(
+          "accommodationDetails"
+        );
+        const accomId = document.getElementById("accomId").value;
+
+        const response = await axios.get(
+          `http://127.0.0.1:3000/accom/findAccom/${accomId}`
+        );
+
+        const accom = response.data;
+
+        accommodationDetailsDiv.innerHTML = `
+          <h3>숙소 정보</h3>
+          <ul>
+            <li>이름: ${accom.name}</li>
+            <li>타입: ${accom.type}</li>
+            <li>주소: ${accom.address}</li>
+            <li>소개: ${accom.introduction}</li>
+            <li>편의시설: ${accom.amentities}</li>
+            <li>침실 수: ${accom.bedroomNum}</li>
+            <li>침대 개수: ${accom.bedNum}</li>
+            <li>화장실 수: ${accom.bathroomNum}</li>
+            <li>최대 인원: ${accom.maxCapacity}</li>
+          </ul>
+        `;
+      }
+
+      async function showReview() {
+        const reviewInfos = document.getElementById("reviewInfos");
+        const accomId = document.getElementById("accomId").value;
+
+        const response = await axios.get(
+          `http://127.0.0.1:3000/review/findReviews/${accomId}`
+        );
+
+        const reviews = response.data;
+
+        reviewInfos.innerHTML = `
+        <h3>리뷰</h3>
+        ${reviews
+          .map(
+            (review) => `
+                    <ul>
+                      <li>별점: ${review.rating}</li>
+                      <li>리뷰: ${review.content}</li>
+                    </ul>
+                  `
+          )
+          .join("")}
+        `;
+      }
+
+      async function drawCalendar() {
+        const calendarBody = document.getElementById("calendar-body");
+        calendarBody.innerHTML = ""; // 기존 내용 초기화
+
+        const accomId = document.getElementById("accomId").value;
+
+        const today = new Date();
+        const selectedMonth = document.getElementById("month").value;
+        const currentYear = today.getFullYear();
+
+        const firstDayOfMonth = new Date(currentYear, selectedMonth - 1, 1);
+        const lastDayOfMonth = new Date(currentYear, selectedMonth, 0);
+        const daysInMonth = lastDayOfMonth.getDate();
+        const firstDayOfWeek = firstDayOfMonth.getDay(); // 0(Sun) ~ 6(Sat)
+        let dayCounter = 1;
+
+        const response = await axios.get(
+          `http://127.0.0.1:3000/rental/getRentalDetail/${accomId}`
+        );
+        const accomRentalDetails = response.data.rental;
+
+        for (let i = 0; i < 6; i++) {
+          const row = document.createElement("tr");
+
+          for (let j = 0; j < 7; j++) {
+            const cell = document.createElement("td");
+
+            if (i === 0 && j < firstDayOfWeek) {
+              // 이번 달 시작일 이전의 빈 칸
+              cell.textContent = "";
+            } else if (dayCounter <= daysInMonth) {
+              // 이번 달의 날짜
+              cell.textContent = dayCounter;
+
+              // accomRentalDetails 배열을 순회하며 날짜 범위 확인
+              const highlightedDay = accomRentalDetails.some((detail) => {
+                const inday = new Date(detail.checkInDate).getDate();
+                const outday = new Date(detail.checkOutDate).getDate();
+                return dayCounter >= inday && dayCounter <= outday;
+              })
+                ? `${cell.textContent}( O )`
+                : `${cell.textContent}( * )`;
+
+              if (
+                dayCounter === today.getDate() &&
+                selectedMonth - 1 === today.getMonth() &&
+                currentYear === today.getFullYear()
+              ) {
+                // 오늘의 날짜는 강조
+                cell.style.fontWeight = "bold";
+              }
+              dayCounter++;
+              cell.textContent = highlightedDay;
+            } else {
+              // 이번 달 종료 후의 빈 칸
+              cell.textContent = "";
+            }
+            row.appendChild(cell);
+          }
+          calendarBody.appendChild(row);
+
+          if (dayCounter > daysInMonth) {
+            break;
+          }
+        }
+      }
+
+      /*************************************************************
        * Scenario 3
        **************************************************************/
 
@@ -261,7 +462,6 @@
             `http://127.0.0.1:3000/rental/createRental`,
             reservationData
           );
-
         } catch (e) {
           console.error(e);
         }
@@ -419,6 +619,47 @@
           return [];
         }
       }
+
+      /*************************************************************
+       * Scenario 6
+       **************************************************************/
+      async function registReview() {
+        try {
+          const guestId = document.getElementById("guestId").value;
+          const rentalId = document.getElementById("rentalId").value;
+          const rating = document.getElementById("star").value;
+          const content = document.getElementById("comment").value;
+          console.log(guestId + " " + rentalId + " " + rating + " " + content);
+
+          // 간단한 입력 값 유효성 검사 (필요에 따라 보다 강력한 검사 추가)
+          if (!guestId || !rentalId || !rating || !content) {
+            console.log("모든 필수 항목을 입력하세요.");
+          }
+          // 평가 값의 범위 확인 (예: 1에서 5 사이 여부)
+          const validRatingRange =
+            parseFloat(rating) >= 1 && parseFloat(rating) <= 5;
+          if (!validRatingRange) {
+            console.log("평가는 1에서 5 사이의 값을 가져야 합니다.");
+          }
+
+          const reviewData = {
+            guestId,
+            rentalId,
+            rating,
+            content,
+          };
+
+          const reviewRes = await axios.post(
+            `http://127.0.0.1:3000/review/addReview`,
+            reviewData
+          );
+          console.log(reviewRes.data);
+          console.log("리뷰 등록 완료 !");
+        } catch (e) {
+          console.log("에러 발생" + e);
+        }
+      }
+      const axios = window.axios;
     </script>
   </body>
 </html>

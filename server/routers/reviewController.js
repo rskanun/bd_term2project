@@ -91,6 +91,37 @@ router.get("/findReview", async (req, res) => {
   }
 });
 
+router.get("/findReviews/:accomId", async (req, res) => {
+  const accomId = new mongoose.Types.ObjectId(req.params.accomId);
+
+  try {
+    const rentals = await RentalHistory.find({ accommodationId: accomId });
+    const reviews = await Promise.all(
+      rentals.map(async (rental) => {
+        const reviewsForRental = await Review.find({ rentalId: rental._id });
+        return reviewsForRental ? reviewsForRental : null;
+      })
+    );
+
+    return res.status(200).json(reviews.flat());
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "서버 오류!" });
+  }
+});
+
+router.post("/addReview", async (req, res) => {
+  const { rentalId, guestId, rating, content } = req.body;
+  try {
+    const review = await Review.create({ rentalId, guestId, rating, content });
+    console.log(review);
+    return res.json(review);
+  }
+  catch (err) {
+    console.log(err);
+  }
+});
+
 const generateDummyData = ({ rentalId, guestId }) => {
   return {
     rentalId,
